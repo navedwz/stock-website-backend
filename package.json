@@ -9,6 +9,6 @@
     "express": "latest",
     "cors": "latest",
     "dotenv": "latest",
-    "axios": "latest"
-  }
+    "axios": "latest",
+    "cheerio": "latest"
 }
