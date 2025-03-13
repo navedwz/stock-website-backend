@@ -7,12 +7,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Caching variables for stock data
+// Caching for stock data
 let cachedStocks = [];
-let lastUpdated = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes caching
+let lastUpdatedStocks = 0;
+const STOCKS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// ✅ Function to fetch live stock data from DSE website
+// Caching for historical data
+let cachedHistoricalData = {};
+let lastUpdatedHistory = 0;
+const HISTORY_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+// ✅ Function to fetch live stock data from DSE
 const fetchStocksData = async () => {
   try {
     console.log('🔄 Fetching fresh stock data...');
@@ -41,21 +46,35 @@ const fetchStocksData = async () => {
     });
 
     cachedStocks = stocks;
-    lastUpdated = Date.now();
+    lastUpdatedStocks = Date.now();
     console.log(`✅ Stock data fetched successfully! ${stocks.length} stocks updated.`);
   } catch (error) {
     console.error('❌ Error fetching stock data:', error);
   }
 };
 
-// ✅ Fetch initial data on startup
+// ✅ Function to fetch historical stock data
+const fetchHistoricalData = async (tradingCode) => {
+  // **Simulating historical data (Replace with real API later)**
+  let fakeData = [];
+  for (let i = 7; i >= 0; i--) {
+    fakeData.push({
+      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      price: (Math.random() * 100 + 100).toFixed(2) // Fake price
+    });
+  }
+  return fakeData;
+};
+
+// ✅ Initial Data Fetching at Startup
 fetchStocksData();
 
-// ✅ Ensure API properly serves stock data
+// ✅ Route to Get Live Stock Data
 app.get('/api/stocks', async (req, res) => {
   const currentTime = Date.now();
 
-  if (cachedStocks.length === 0 || (currentTime - lastUpdated > CACHE_DURATION)) {
+  // If cache expired or empty, refresh data
+  if (cachedStocks.length === 0 || (currentTime - lastUpdatedStocks > STOCKS_CACHE_DURATION)) {
     await fetchStocksData();
   }
 
@@ -66,7 +85,27 @@ app.get('/api/stocks', async (req, res) => {
   res.json(cachedStocks);
 });
 
-// ✅ Fix the root route (Health Check)
+// ✅ Route to Get Historical Data for a Specific Stock
+app.get('/api/stocks/history/:trading_code', async (req, res) => {
+  const { trading_code } = req.params;
+
+  const currentTime = Date.now();
+  if (!cachedHistoricalData[trading_code] || (currentTime - lastUpdatedHistory > HISTORY_CACHE_DURATION)) {
+    try {
+      const data = await fetchHistoricalData(trading_code);
+      cachedHistoricalData[trading_code] = data;
+      lastUpdatedHistory = currentTime;
+      console.log(`✅ Historical data generated for ${trading_code}`);
+    } catch (error) {
+      console.error(`❌ Error fetching historical data for ${trading_code}:`, error);
+      return res.status(500).json({ error: 'Error fetching historical data' });
+    }
+  }
+
+  res.json(cachedHistoricalData[trading_code]);
+});
+
+// ✅ Fix the Root Route (Health Check)
 app.get('/', (req, res) => {
   res.send('✅ Stock API is Running!');
 });
