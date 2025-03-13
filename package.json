@@ -11,4 +11,5 @@
     "dotenv": "latest",
     "axios": "latest",
     "cheerio": "latest"
+  }
 }
