@@ -63,18 +63,28 @@ const fetchHistoricalData = async (tradingCode) => {
 
     let historicalData = [];
 
-    // Find historical data table
+    // ✅ Ensure we correctly parse and clean data
     $('table.table-bordered tbody tr').each((index, element) => {
       const tds = $(element).find('td');
       if (tds.length >= 6) {
-        let date = $(tds[0]).text().trim();
-        let price = $(tds[1]).text().trim();
+        let dateRaw = $(tds[0]).text().trim();
+        let priceRaw = $(tds[1]).text().trim();
 
-        historicalData.push({ date, price });
+        // ✅ Convert date to proper format (YYYY-MM-DD)
+        let dateParts = dateRaw.split('-');
+        let formattedDate = `20${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`; // Convert DD-MM-YY to YYYY-MM-DD
+
+        // ✅ Ensure price is a number
+        let price = parseFloat(priceRaw.replace(/,/g, ''));
+
+        // ✅ Push only valid data
+        if (!isNaN(price)) {
+          historicalData.push({ date: formattedDate, price });
+        }
       }
     });
 
-    // Reverse array so it's in chronological order
+    // ✅ Reverse array to ensure chronological order
     historicalData.reverse();
 
     return historicalData;
@@ -83,6 +93,7 @@ const fetchHistoricalData = async (tradingCode) => {
     return [];
   }
 };
+
 
 // ✅ Initial Data Fetching at Startup
 fetchStocksData();
