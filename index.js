@@ -53,22 +53,23 @@ const fetchStocksData = async () => {
 // ✅ Fetch initial data on startup
 fetchStocksData();
 
-// ✅ API Route to Serve Stock Data
-app.get('/api/stocks', async (req, res) => {
-  const currentTime = Date.now();
+// ✅ Fixing the Historical Data API
+app.get('/api/stocks/history/:trading_code', async (req, res) => {
+  const { trading_code } = req.params;
 
-  // If cache is expired or empty, refresh data
-  if (cachedStocks.length === 0 || (currentTime - lastUpdated > CACHE_DURATION)) {
-    await fetchStocksData();
+  // ✅ Simulating historical data (Replace this with real API later)
+  const fakeHistoricalData = [];
+  for (let i = 7; i >= 0; i--) {
+    fakeHistoricalData.push({
+      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      price: (Math.random() * 100 + 100).toFixed(2) // Fake price
+    });
   }
 
-  // If still empty after refresh, return error
-  if (cachedStocks.length === 0) {
-    return res.status(500).json({ error: '❌ No stock data available' });
-  }
-
-  res.json(cachedStocks);
+  console.log(`✅ Historical data generated for ${trading_code}`);
+  res.json(fakeHistoricalData);
 });
+
 
 // ✅ Health Check Route (Optional)
 app.get('/', (req, res) => {
