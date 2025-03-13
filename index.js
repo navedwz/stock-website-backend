@@ -23,7 +23,6 @@ const fetchStocksData = async () => {
     $('table.table.table-bordered.background-white.shares-table tbody tr').each((index, element) => {
       const tds = $(element).find('td');
 
-      // Ensure data exists before pushing
       if (tds.length > 6) {
         const stock = {
           trading_code: $(tds[1]).text().trim(),
@@ -41,7 +40,6 @@ const fetchStocksData = async () => {
       }
     });
 
-    // ✅ Update cache
     cachedStocks = stocks;
     lastUpdated = Date.now();
     console.log(`✅ Stock data fetched successfully! ${stocks.length} stocks updated.`);
@@ -53,25 +51,22 @@ const fetchStocksData = async () => {
 // ✅ Fetch initial data on startup
 fetchStocksData();
 
-// ✅ Fixing the Historical Data API
-app.get('/api/stocks/history/:trading_code', async (req, res) => {
-  const { trading_code } = req.params;
+// ✅ Ensure API properly serves stock data
+app.get('/api/stocks', async (req, res) => {
+  const currentTime = Date.now();
 
-  // ✅ Simulating historical data (Replace this with real API later)
-  const fakeHistoricalData = [];
-  for (let i = 7; i >= 0; i--) {
-    fakeHistoricalData.push({
-      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      price: (Math.random() * 100 + 100).toFixed(2) // Fake price
-    });
+  if (cachedStocks.length === 0 || (currentTime - lastUpdated > CACHE_DURATION)) {
+    await fetchStocksData();
   }
 
-  console.log(`✅ Historical data generated for ${trading_code}`);
-  res.json(fakeHistoricalData);
+  if (cachedStocks.length === 0) {
+    return res.status(500).json({ error: '❌ No stock data available' });
+  }
+
+  res.json(cachedStocks);
 });
 
-
-// ✅ Health Check Route (Optional)
+// ✅ Fix the root route (Health Check)
 app.get('/', (req, res) => {
   res.send('✅ Stock API is Running!');
 });
