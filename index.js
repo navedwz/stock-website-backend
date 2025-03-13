@@ -53,17 +53,35 @@ const fetchStocksData = async () => {
   }
 };
 
-// ✅ Function to fetch historical stock data
+// ✅ Function to fetch real historical stock data from DSE
 const fetchHistoricalData = async (tradingCode) => {
-  // **Simulating historical data (Replace with real API later)**
-  let fakeData = [];
-  for (let i = 7; i >= 0; i--) {
-    fakeData.push({
-      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      price: (Math.random() * 100 + 100).toFixed(2) // Fake price
+  try {
+    console.log(`🔄 Fetching historical data for ${tradingCode}...`);
+    const url = `https://dsebd.org/displayCompany.php?name=${tradingCode}`;
+    const { data } = await axios.get(url);
+    const $ = cheerio.load(data);
+
+    let historicalData = [];
+
+    // Find historical data table
+    $('table.table-bordered tbody tr').each((index, element) => {
+      const tds = $(element).find('td');
+      if (tds.length >= 6) {
+        let date = $(tds[0]).text().trim();
+        let price = $(tds[1]).text().trim();
+
+        historicalData.push({ date, price });
+      }
     });
+
+    // Reverse array so it's in chronological order
+    historicalData.reverse();
+
+    return historicalData;
+  } catch (error) {
+    console.error(`❌ Error fetching historical data for ${tradingCode}:`, error);
+    return [];
   }
-  return fakeData;
 };
 
 // ✅ Initial Data Fetching at Startup
@@ -73,7 +91,6 @@ fetchStocksData();
 app.get('/api/stocks', async (req, res) => {
   const currentTime = Date.now();
 
-  // If cache expired or empty, refresh data
   if (cachedStocks.length === 0 || (currentTime - lastUpdatedStocks > STOCKS_CACHE_DURATION)) {
     await fetchStocksData();
   }
@@ -85,7 +102,7 @@ app.get('/api/stocks', async (req, res) => {
   res.json(cachedStocks);
 });
 
-// ✅ Route to Get Historical Data for a Specific Stock
+// ✅ Route to Get Real Historical Data
 app.get('/api/stocks/history/:trading_code', async (req, res) => {
   const { trading_code } = req.params;
 
@@ -95,7 +112,7 @@ app.get('/api/stocks/history/:trading_code', async (req, res) => {
       const data = await fetchHistoricalData(trading_code);
       cachedHistoricalData[trading_code] = data;
       lastUpdatedHistory = currentTime;
-      console.log(`✅ Historical data generated for ${trading_code}`);
+      console.log(`✅ Real historical data fetched for ${trading_code}`);
     } catch (error) {
       console.error(`❌ Error fetching historical data for ${trading_code}:`, error);
       return res.status(500).json({ error: 'Error fetching historical data' });
